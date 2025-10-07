@@ -12,5 +12,5 @@ segmentator
 
 # workdirs
 work_dirs/*
-!work_dirs/clean_forestformer
+
 
