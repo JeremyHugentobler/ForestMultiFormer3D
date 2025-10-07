@@ -125,11 +125,13 @@ def batch_export(max_num_point,
             print('File already exists. skipping.')
             print('-' * 20 + 'done')
             continue
-        try:
-            export_one_scan(scan_name, output_filename_prefix, max_num_point,
+        
+        #try:
+        export_one_scan(scan_name, output_filename_prefix, max_num_point,
                             forainetv2_dir, test_mode)
-        except Exception:
-            print(f'Failed export scan: {scan_name}')
+        #except Exception:
+            # Print the error message
+        #print(f'Failed export scan: {scan_name}' + str(Exception.__traceback__)) 
         print('-' * 20 + 'done')
 
 

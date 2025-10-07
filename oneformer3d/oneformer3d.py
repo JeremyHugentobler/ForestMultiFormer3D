@@ -2096,6 +2096,7 @@ class ForAINetV2OneFormer3D_XAwarequery(Base3DDetector):
         base_name = os.path.basename(lidar_path)
         current_filename = os.path.splitext(base_name)[0]
         #if 'val' in lidar_path:
+        
         if 'test' in lidar_path:
             import numpy as np
             from sklearn.neighbors import NearestNeighbors
@@ -2265,9 +2266,14 @@ class ForAINetV2OneFormer3D_XAwarequery(Base3DDetector):
         current_filename = os.path.splitext(base_name)[0]
         t1 = time.time()                 
         #########print(f"load pc: {(t1 - t0)*1000:.0f} ms")
-        #is_test = True
-        #if is_test:
-        if 'test' in lidar_path:
+        print(10*"-#")
+        print(f"Processing file: {current_filename}")
+        print(f"Full lidar path: {lidar_path}")
+
+        ## MULTI-ITERATIONS CHANGE
+        is_test = True
+        if is_test:
+        #if 'test' in lidar_path:
             step_size = self.radius/4
             grid_size = 0.2
             num_points = 640000
@@ -2557,8 +2563,8 @@ class ForAINetV2OneFormer3D_XAwarequery(Base3DDetector):
             # Save the final combined results
             region_path = os.path.join(output_path, f"{current_filename}.ply")
  
-            self.save_ply_withscore(original_points.cpu().numpy(), final_semantic_labels, clean_all_pre_ins, merged_instance_scores, region_path, pts_semantic_gt, pts_instance_gt)
-            #self.save_bluepoints(original_points.cpu().numpy(), final_semantic_labels, clean_all_pre_ins, merged_instance_scores, region_path, pts_semantic_gt, pts_instance_gt)
+            #self.save_ply_withscore(original_points.cpu().numpy(), final_semantic_labels, clean_all_pre_ins, merged_instance_scores, region_path, pts_semantic_gt, pts_instance_gt)
+            self.save_bluepoints(original_points.cpu().numpy(), final_semantic_labels, clean_all_pre_ins, merged_instance_scores, region_path, pts_semantic_gt, pts_instance_gt)
             
             t15 = time.time()                 
             ######print(f"postprocessing 9: {(t15 - t14)*1000:.0f} ms")

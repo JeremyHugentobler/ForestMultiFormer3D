@@ -7,7 +7,7 @@ custom_imports = dict(imports=['oneformer3d'])
 num_channels = 32
 num_instance_classes = 3
 num_semantic_classes = 3
-radius=16  #modify the radius of input cylinder
+radius=12  #modify the radius of input cylinder
 score_th = 00.4
 chunk = 20_000
 model = dict(

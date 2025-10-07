@@ -1,9 +1,7 @@
 FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-devel
 
 # 更新和安装必要的依赖
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub \
-    && apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/7fa2af80.pub \
-    && apt-get update \
+RUN apt-get update \
     && apt-get install -y ffmpeg libsm6 libxext6 git ninja-build libglib2.0-0 libxrender-dev cmake \
     && apt-get install -y build-essential software-properties-common \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
@@ -12,7 +10,7 @@ RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 \
     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 60 \
     && apt-get install -y python3-dev python3-pip \
-    && apt-get install -y --no-install-recommends libopenblas-dev nvidia-utils-530
+    && apt-get install -y --no-install-recommends libopenblas-dev
 
 # 设置环境变量以确保 CUDA 工具的可用性
 ENV PATH=/usr/local/cuda/bin:$PATH
@@ -31,23 +29,24 @@ RUN pip install mmcv==2.0.0 -f https://download.openmmlab.com/mmcv/dist/cu116/to
 
 # 安装 MinkowskiEngine
 RUN apt-get update \
-    && apt-get -y install libopenblas-dev nvidia-cuda-dev
+    && apt-get -y install libopenblas-dev 
 #RUN TORCH_CUDA_ARCH_LIST="6.1 7.0 8.6" \  A10
 #A100
-RUN TORCH_CUDA_ARCH_LIST="8.0" \ 
-    pip install git+https://github.com/NVIDIA/MinkowskiEngine.git@02fc608bea4c0549b0a7b00ca1bf15dee4a0b228 -v --no-deps \
-    --install-option="--blas=openblas" \
-    --install-option="--force_cuda"
+RUN TORCH_CUDA_ARCH_LIST="7.5" \
+    pip install -v --no-deps \
+      git+https://github.com/NVIDIA/MinkowskiEngine.git@02fc608bea4c0549b0a7b00ca1bf15dee4a0b228 \
+      --install-option="--blas=openblas" \
+      --install-option="--force_cuda"
 
 # 手动编译 torch-scatter，确保 CUDA 支持
 RUN git clone https://github.com/rusty1s/pytorch_scatter.git \
     && cd pytorch_scatter \
     && git checkout tags/2.0.9 -b v2.0.9 \
-    && TORCH_CUDA_ARCH_LIST="6.1;7.0;8.0" FORCE_CUDA=1 pip install .
+    && TORCH_CUDA_ARCH_LIST="6.1;7.5;8.0" FORCE_CUDA=1 pip install .
 
 # 单独安装 ScanNet superpoint segmentator
-RUN git clone https://github.com/Karbo123/segmentator.git /workspace/segmentator \
-    && cd /workspace/segmentator/csrc \
+RUN git clone https://github.com/Karbo123/segmentator.git /segmentator \
+    && cd /segmentator/csrc \
     && git reset --hard 76efe46d03dd27afa78df972b17d07f2c6cfb696 \
     && mkdir build \
     && cd build \
@@ -119,7 +118,6 @@ RUN pip install --no-deps \
     requests-oauthlib \
     oauthlib
 
-RUN apt-get update && apt-get install -y nvidia-utils-530
 
 # 设置 PYTHONPATH 环境变量
 ENV PYTHONPATH=/workspace

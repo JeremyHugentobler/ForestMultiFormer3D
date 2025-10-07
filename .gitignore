@@ -1,0 +1,16 @@
+# Data folder
+data/ForAINetV2/*
+!data/ForAINetV2/meta_data
+!data/ForAINetV2/*.py
+
+# pycache
+*/__pycache__/*
+
+# Built libraries
+pytorch_scatter
+segmentator
+
+# workdirs
+work_dirs/*
+!work_dirs/clean_forestformer
+

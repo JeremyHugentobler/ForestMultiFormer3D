@@ -75,7 +75,7 @@ def trigger_visualization_hook(cfg, args):
         visualization_hook['draw'] = True
         if args.show:
             visualization_hook['show'] = True
-            visualization_hook['wait_time'] = args.wait_timeP
+            visualization_hook['wait_time'] = args.wait_time
         if args.show_dir:
             visualization_hook['test_out_dir'] = args.show_dir
         all_task_choices = [
