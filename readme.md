@@ -1,21 +1,11 @@
 # ForestFormer3D: A Unified Framework for End-to-End Segmentation of Forest LiDAR 3D Point Clouds
 
-This is the official implementation of the paper:
-
-**"ForestFormer3D: A Unified Framework for End-to-End Segmentation of Forest LiDAR 3D Point Clouds"**
-
-(*Accepted as Oral at ICCV 2025 – see you in 🏝️ Honolulu!* 🎉)
-
-- 🌐 [Project page](https://bxiang233.github.io/FF3D/)
 - 📄 [Paper on arXiv](https://www.arxiv.org/abs/2506.16991)
 - 📦 [Dataset & pre-trained model on zenodo](https://zenodo.org/records/16742708)
 
 ---
 
 # ForestFormer3D environment setup
-This guide provides step-by-step instructions to build and configure the Docker environment for ForestFormer3D, set up debugging in Visual Studio Code, and resolve common issues.
-
-At first, please download the dataset and pretrained model from Zenodo, and unzip and place them in the correct locations. Make sure the directory structure looks like:
 
 ```bash
 ForestFormer3D/
@@ -31,70 +21,49 @@ ForestFormer3D/
 
 ## Steps to build and configure the environment
 
-### **1. Build Docker image**
+### **1. Build Docker image (on local machine)**
 
 ```bash
-# Navigate to the project directory
-cd #locationoftheproject#
 
 # Build the Docker image
-sudo docker build -t forestformer3d-image .
+sudo docker build -t ff3d-cluster-image:latest .
 
-# Run the Docker container with GPU support, shared memory allocation, and port mapping
-sudo docker run --gpus all --shm-size=128g -d -p 127.0.0.1:49211:22 \
-  -v #locationofproject#:/workspace \
-  -v /workspace/segmentator:/workspace/segmentator \
-  --name forestformer3d-container forestformer3d-image
+# Check that it works by running it locally once
+sudo docker run --gpus all --shm-size=8g -d -v ./:/workspace  --name ff3d-container -it ff3d-cluster-image:latest bash
 
-# Enter the running container
-sudo docker exec -it forestformer3d-container /bin/bash
-
-# Verify required files exist in your container
-# ls
-# Expected output:
-# Dockerfile  configs  data  oneformer3d  readme  replace_mmdetection_files  segmentator  tools  work_dirs
+# Enter the running container (or remove the -d in the previous command)
+sudo docker exec -it ff3d-container /bin/bash
 ```
 
-### **2. Resolve Torch-Points-Kernels import error**
- 
-```bash
-#test whether you successfully installed torch_points_kernels
-python -c "from torch_points_kernels import instance_iou; print('torch-points-kernels loaded successfully')"
-```
-and if you encounter the following error:
+### **2. Startup actions**
+1. Verifiy that torch points kernel is installed properly
+    ```bash
+    #test whether you successfully installed torch_points_kernels
+    python3 -c "from torch_points_kernels import instance_iou; print('torch-points-kernels loaded successfully')"
+    ```
+    if it fails, it can be resolved using:
+    ```bash
+    python3 -m pip uninstall torch-points-kernels -y
+    python3 -m pip install --no-deps --no-cache-dir torch-points-kernels==0.7.0
+    ```
+2. Same for torch-cluster: RuntimeError: Not compiled with CUDA support -> do that
+    ```bash
+    python3 -m pip uninstall torch-cluster
+    python3 -m pip install -U --no-cache-dir https://data.pyg.org/whl/torch-1.13.1+cu117.html torch-cluster
+    ```
+3. Replace modified files for mmengine and mmdet3d
+    ```bash
+    # If you have an error such as "path does not exist", use python3 -m pip show mmengine to see the correct path
+    cp /workspace/replace_mmdetection_files/loops.py /usr/local/lib/python3.10/dist-packages/mmengine/runner/
+    cp /workspace/replace_mmdetection_files/base_model.py /usr/local/lib/python3.10/dist-packages/mmengine/model/base_model/
+    cp /workspace/replace_mmdetection_files/transforms_3d.py /usr/local/lib/python3.10/dist-packages/mmdet3d/datasets/transforms/
+    ```
+4. Bind the segmentator's build folder to the workspace (simlink)
+    ```bash
+    ln -s /segmentator/csrc/build/ /workspace/segmentator/csrc/build
+    ```
 
-```bash
-ModuleNotFoundError: No module named 'torch_points_kernels.points_cuda'
-```
-
-please try to fix it by:
-```bash
-# Uninstall the existing torch-points-kernels version
-pip uninstall torch-points-kernels -y
-
-# Reinstall the specific compatible version
-pip install --no-deps --no-cache-dir torch-points-kernels==0.7.0
-```
-
-### **3. Reinstall torch-cluster**
-```bash
-pip uninstall torch-cluster
-pip install torch-cluster --no-cache-dir --no-deps
-```
-
-### **4. Replace required files**
-
-```bash
-# Find the mmengine package path
-pip show mmengine
-
-# Replace the following files with updated versions:
-cp /workspace/replace_mmdetection_files/loops.py /opt/conda/lib/python3.10/site-packages/mmengine/runner/
-cp /workspace/replace_mmdetection_files/base_model.py /opt/conda/lib/python3.10/site-packages/mmengine/model/base_model/
-cp /workspace/replace_mmdetection_files/transforms_3d.py /opt/conda/lib/python3.10/site-packages/mmdet3d/datasets/transforms/
-```
-
-### **5. Run the program**
+### **3. Run the program**
 
 #### **Data preparation**
 
@@ -113,15 +82,12 @@ Ensure the following three folders are set up in your workspace:
 # Step 1: Navigate to the data folder
 cd /workspace/data/ForAINetV2
 
-pip install laspy
-pip install "laspy[lazrs]"
-
 # Step 2: Run the data loader script
 python batch_load_ForAINetV2_data.py
 # After this you will have folder /workspace/data/ForAINetV2/forainetv2_instance_data
 
 # Step 3: Navigate back to the main directory
-cd ../..
+cd /workspace
 
 # Step 4: Create data for training
 python tools/create_data_forainetv2.py forainetv2
@@ -129,9 +95,8 @@ python tools/create_data_forainetv2.py forainetv2
 
 #### **Start training**
 ```bash
-export PYTHONPATH=/workspace
 # Run the training script with the specified configuration and work directory
-CUDA_VISIBLE_DEVICES=0 python tools/train.py /workspace/configs/oneformer3d_qs_radius16_qp300_2many.py \
+CUDA_VISIBLE_DEVICES=0 python3 tools/train.py /workspace/configs/oneformer3d_qs_radius16_qp300_2many.py \
   --work-dir /workspace/work_dirs/<output_folder_name>
 ```
 
@@ -146,14 +111,14 @@ python tools/fix_spconv_checkpoint.py \
 #2. Modify the output_path in function "predict" in class ForAINetV2OneFormer3D_XAwarequery in file /workspace/oneformer3d/oneformer3d.py
 
 #3. Run the test script:
-CUDA_VISIBLE_DEVICES=0 python tools/test.py /workspace/configs/oneformer3d_qs_radius16_qp300_2many.py \
+CUDA_VISIBLE_DEVICES=0 python3 tools/test.py /workspace/configs/oneformer3d_qs_radius16_qp300_2many.py \
   work_dirs/oneformer3d_1xb4_forainetv2/trained_fix.pth
 
 ```
 ##### Load pre-trained model
 ```bash
 # If you want to use the official pre-trained model, run:
-CUDA_VISIBLE_DEVICES=0 python tools/test.py /workspace/configs/oneformer3d_qs_radius16_qp300_2many.py /workspace/work_dirs/clean_forestformer/epoch_3000_fix.pth
+CUDA_VISIBLE_DEVICES=0 python3 tools/test.py /workspace/configs/oneformer3d_qs_radius16_qp300_2many.py /workspace/work_dirs/clean_forestformer/epoch_3000_fix.pth
 
 ```
 
