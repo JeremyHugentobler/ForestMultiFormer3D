@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#SBATCH --job-name=ff3d-first-test
+#SBATCH --time=2:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --qos=normal
+#SBATCH --mem=20G
+#SBATCH --cpus-per-task=8
+#SBATCH --gres=gpu:1
+
+
+# Headless & threading
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export MPLBACKEND=Agg
+export QT_QPA_PLATFORM=offscreen
+export NVIDIA_DRIVER_CAPABILITIES=compute,utility
+export PIP_CACHE_DIR=/workspace/.cache/pip
+
+# Paths
+SIF=/home/jhugento/PDS/ForestMultiFormer3D/ff3d.sif #container
+WK=/home/jhugento/PDS/ForestMultiFormer3D #work directory
+CFG=/workspace/configs/oneformer3d_qs_radius16_qp300_2many.py # config
+CKPT=/workspace/work_dirs/clean_forestformer/epoch_3000_fix.pth  # weights
+
+# Will run the bootstrap script first, then the training # Assumes data has been pre-processed
+srun apptainer run --nv --writable-tmpfs --env PIP_CACHE_DIR=/workspace/.cache/pip --pwd /workspace -B "$WK":/workspace "$SIF" \
+	python3 tools/test.py "$CFG" "$CKPT"
+
