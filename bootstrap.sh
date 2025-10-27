@@ -3,6 +3,9 @@ set -euo pipefail
 
 echo "[bootstrap] start"
 
+# Set the pip cache dir to a writable location using the pip command
+python3 -m pip config set global.cache-dir /workspace/.cache/pip-cache || true
+
 # --------- headless + threads (good defaults on HPC) ----------
 export MPLBACKEND=${MPLBACKEND:-Agg}
 export QT_QPA_PLATFORM=${QT_QPA_PLATFORM:-offscreen}

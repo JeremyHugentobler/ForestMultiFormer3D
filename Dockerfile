@@ -88,8 +88,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends tini \
     && rm -rf /var/lib/apt/lists/* 
 
 # Default fixing and installation scripts
-COPY bootstrap.sh /usr/local/bin/bootstrap 
-ENTRYPOINT ["/usr/bin/tini","--","/usr/local/bin/bootstrap"]
+#COPY bootstrap.sh /usr/local/bin/bootstrap # Was not convenient in the end, if you need to change the startup script, you needed tor rebuild everything
+ENTRYPOINT ["/usr/bin/tini","--","/workspace/bootstrap.sh"]
 # Optional default CMD, can be overridden
 CMD ["bash"]
 

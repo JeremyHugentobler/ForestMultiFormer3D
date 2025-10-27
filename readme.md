@@ -35,7 +35,48 @@ sudo docker run --gpus all --shm-size=8g -d -v ./:/workspace  --name ff3d-contai
 sudo docker exec -it ff3d-container /bin/bash
 ```
 
-### **2. Startup actions**
+### **2. Scitas/HPS workflow**
+Scitas is the HPC group of EPFL and was used for inference and training of this pipeline.
+
+1. First you need to **tag** the docker container locally
+      ```bash
+      # ff3d-cluster-image:latest is the local name of the image, vaspette/... is on the online repository
+      sudo docker tag ff3d-cluster-image:latest vaspette/ff3d-cluster-image:latest
+      ```
+2. Then to push it to your registry (DockerHub here)
+      ```bash
+      sudo docker push ff3d-cluster-image:latest
+      ```
+3. Now that it is pushed as a Docker image online, we can retreive it after connecting in ssh to the HPC cluster
+      ```bash
+      # Will be downloaded as a local .sif file (no need to schedule a slurm for pulling)
+      apptainer pull ff3d.sif docker://vaspette/ff3d-cluster-image:latest
+      ```
+4. Start an interactive GPU session
+      ```bash
+      # Ask for 1 GPU for debug purposes during 45 minutes
+      salloc -G 1 -q debug -t 45:00 
+      # Connects to a shell linked to the allocated session
+      srun --pty bash
+5. Run the container using the .sif file
+      ```bash
+      # With no specific exec parameter, the bootstrap script is executed 
+      apptainer run --nv --writable-tmpfs -B ./:/workspace ff3d.sif
+      ```
+6. Optionally, you can setup an overlay that keeps the changes made in the image, saving some time when bootstrapping
+      ```bash
+      # create once (size in MB)
+      apptainer overlay create --size 4096 ff3d_overlay.img
+      # use it (changes persist in myoverlay.img)
+      apptainer run --nv --writable-tmpfs -B ./:/workspace --overlay ff3d_overlay.img ff3d.sif 
+      # To gain even more time, this can be executed in the container
+      export PIP_CACHE_DIR=/workspace/.cache/pip
+      ```
+
+### **3. Startup actions**
+If you followed the commands on scitas above or run the image  without hi-jacking the launched program (exec, specific run commands, ...), there is no need to do those step as the bootstrap.sh script takes care of that. It takes around 15 minutes to complete and builds the missing librairies automatically.
+
+In the case where you want to do it manually:
 1. Verifiy that torch points kernel is installed properly
     ```bash
     #test whether you successfully installed torch_points_kernels
@@ -63,7 +104,7 @@ sudo docker exec -it ff3d-container /bin/bash
     ln -s /segmentator/csrc/build/ /workspace/segmentator/csrc/build
     ```
 
-### **3. Run the program**
+### **4. Run the program**
 
 #### **Data preparation**
 
@@ -75,6 +116,7 @@ Ensure the following three folders are set up in your workspace:
 
 - Place all `.ply` files for training and validation in the `train_val_data` folder.
 - Place all `.ply` files for testing in the `test_data` folder.
+
 
 #### **Data preprocessing steps**
 
@@ -180,66 +222,7 @@ Once preprocessing is complete, you can run:
 CUDA_VISIBLE_DEVICES=0 python tools/test.py /workspace/configs/oneformer3d_qs_radius16_qp300_2many.py /workspace/work_dirs/clean_forestformer/epoch_3000_fix.pth
 ```
 
-
 ---
-
-## ⚠️ Using non-ply test files
-
-If your test files are **not in `.ply` format**, you need to modify the data loading logic.
-
-### 1. Update `batch_load_ForAINetV2_data.py`
-
-File path:
-```
-/workspace/data/ForAINetV2/batch_load_ForAINetV2_data.py
-```
-
-Find the function `export_one_scan()` and modify:
-
-```python
-ply_file = osp.join(forainetv2_dir, scan_name + '.ply')
-```
-
-to match your test file format, for example:
-
-```python
-pc_file = osp.join(forainetv2_dir, scan_name + '.laz')  # or other formats
-```
-
----
-
-### 2. Update `load_forainetv2_data.py` to support new format
-
-File path:
-```
-/workspace/data/ForAINetV2/load_forainetv2_data.py
-```
-
-Find the function `export()` and modify:
-
-```python
-pcd = read_ply(ply_file)
-```
-
-If you're using `.laz`, replace with something like:
-
-```python
-import laspy
-
-def read_laz(filename):
-    las = laspy.read(filename)
-    return {
-        "x": las.x,
-        "y": las.y,
-        "z": las.z,
-        # Add more fields as needed
-    }
-
-pcd = read_laz(ply_file)
-```
-
----
-
 ### 3. If test files do not have ground truth labels
 
 Still in `load_forainetv2_data.py`, locate the following lines:
